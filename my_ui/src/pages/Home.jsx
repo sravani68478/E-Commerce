@@ -9,8 +9,16 @@ const Home = () => {
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
+
+  const fetchCartCount = async () => {
+    try {
+      const res = await api.get("/getcart");
+      const count = res.data.items?.reduce((total, item) => total + item.quantity, 0) || 0;
+      setCartCount(count);
+    } catch (err) {
+      console.error("Error fetching cart count:", err);
+    }
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -29,10 +37,11 @@ const Home = () => {
     fetchProducts();
     
     // Fetch cart count if logged in
+    const token = localStorage.getItem("token");
     if (token) {
       fetchCartCount();
     }
-  }, [token]);
+  }, []); // Empty dependency array - only run once on mount
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -46,17 +55,8 @@ const Home = () => {
     }
   }, [searchQuery, products]);
 
-  const fetchCartCount = async () => {
-    try {
-      const res = await api.get("/getcart");
-      const count = res.data.items?.reduce((total, item) => total + item.quantity, 0) || 0;
-      setCartCount(count);
-    } catch (err) {
-      console.error("Error fetching cart count:", err);
-    }
-  };
-
   const addToCart = async (productId) => {
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
@@ -71,6 +71,9 @@ const Home = () => {
       alert("Failed to add to cart");
     }
   };
+
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
 
   if (loading) return <div className="loading">Loading products...</div>;
 
@@ -120,9 +123,12 @@ const Home = () => {
             <div key={product._id} className="product-card">
               <Link to={`/product/${product._id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <img 
-                  src={product.image || 'https://via.placeholder.com/280x200?text=No+Image'} 
+                  src={product.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="280" height="200"%3E%3Crect fill="%23ddd" width="280" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E'} 
                   alt={product.name}
-                  onError={(e) => e.target.src = 'https://via.placeholder.com/280x200?text=No+Image'}
+                  onError={(e) => {
+                    e.target.onerror = null; // Prevent infinite loop
+                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="280" height="200"%3E%3Crect fill="%23ddd" width="280" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                  }}
                 />
                 <h3>{product.name}</h3>
                 <p>{product.discription}</p>
