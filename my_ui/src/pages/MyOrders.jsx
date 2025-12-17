@@ -40,7 +40,9 @@ const MyOrders = () => {
       alert("Order cancelled successfully");
       fetchOrders();
     } catch (err) {
-      alert("Failed to cancel order");
+      console.error("Cancel order error:", err);
+      const errorMsg = err.response?.data?.message || err.response?.data || "Failed to cancel order";
+      alert(errorMsg);
     }
   };
 

@@ -285,18 +285,40 @@ const cancelorder = async (req, res) => {
   try {
     const orderid = req.params.id;
     const userid = req.user.id;
-    const order = await ordermodel.findOne({ user: userid, _id: orderid });
+    console.log("Cancel order request - OrderID:", orderid, "UserID:", userid);
+    
+    // Find order without strict validation first
+    const order = await ordermodel.findById(orderid);
+    console.log("Order found:", order);
+    
     if (!order) {
+      console.log("Order not found");
       return res.status(400).json({ message: "order not found" });
     }
+    
+    // Check if order belongs to user
+    if (order.user.toString() !== userid) {
+      console.log("Order does not belong to user");
+      return res.status(403).json({ message: "unauthorized" });
+    }
+    
+    console.log("Current order status:", order.orderstatus);
     if (order.orderstatus !== "pending") {
-      return res.status(400).json({ message: "order  cant be cancelled " });
+      console.log("Order cannot be cancelled - status is:", order.orderstatus);
+      return res.status(400).json({ message: "order cant be cancelled - current status: " + order.orderstatus });
     }
 
-    order.orderstatus = "cancel order";
-    await order.save();
-    return res.status(200).json({ message: "order  cancelled succesfully" });
+    // Update using findByIdAndUpdate to avoid validation issues
+    const updatedOrder = await ordermodel.findByIdAndUpdate(
+      orderid,
+      { orderstatus: "cancelled" },
+      { new: true, runValidators: true }
+    );
+    
+    console.log("Order cancelled successfully");
+    return res.status(200).json({ message: "order cancelled successfully", order: updatedOrder });
   } catch (err) {
+    console.error("Cancel order error:", err);
     res.status(400).json({ message: err.message });
   }
 };
@@ -319,6 +341,24 @@ const payment = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+
+// FIX BROKEN ORDERS (Admin only - temporary endpoint)
+const fixBrokenOrders = async (req, res) => {
+  try {
+    const result = await ordermodel.updateMany(
+      { orderstatus: "cancel order" },
+      { $set: { orderstatus: "cancelled" } }
+    );
+    
+    res.status(200).json({ 
+      message: "Fixed broken orders", 
+      modifiedCount: result.modifiedCount 
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 module.exports = {
   postproduct,
   updateproduct,
@@ -337,4 +377,5 @@ module.exports = {
   updatestatus,
   cancelorder,
   payment,
+  fixBrokenOrders,
 };

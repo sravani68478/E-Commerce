@@ -85,4 +85,5 @@ router.get("/getallorder", tokmiddleware, isadmin, contfun.getallorder);
 router.put("/updatestatus/:id", tokmiddleware, isadmin, contfun.updatestatus);
 router.put("/cancelorder/:id", tokmiddleware, contfun.cancelorder);
 router.put("/payment", tokmiddleware, contfun.payment);
+router.get("/fix-orders", tokmiddleware, isadmin, contfun.fixBrokenOrders);
 module.exports = router;
